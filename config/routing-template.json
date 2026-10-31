@@ -9,7 +9,7 @@
   "RemoteDNSType": "DoH",
   "DomesticDNSDomain": "https://dns.yandex.ru/dns-query",
   "DomesticDNSIP": "77.88.8.8",
-  "DomesticDNSType": "DoH"
+  "DomesticDNSType": "DoH",
   "Geositeurl": "{{auto: подставляется scripts/build_routing.py}}",
   "Geoipurl": "{{auto: подставляется scripts/build_routing.py}}",
   "LastUpdated": "{{auto}}",

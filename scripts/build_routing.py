@@ -39,8 +39,8 @@ def main() -> int:
 
     cfg = json.loads(Path(args.template).read_text(encoding="utf-8"))
     # @main вместо @тега: ссылка стабильна (не меняется при сборках),
-    # jsdelivr подтягивает свежие файлы из ветки (кэш до 12 часов)
-    base = f"https://cdn.jsdelivr.net/gh/{args.repo}@main/release"
+    # Стабильные ссылки на геобазы из ветки main через GitHub Raw
+    base = f"https://raw.githubusercontent.com/{args.repo}/main/release"
     cfg["Geositeurl"] = f"{base}/geosite.dat"
     cfg["Geoipurl"] = f"{base}/geoip.dat"
     cfg["LastUpdated"] = args.last_updated

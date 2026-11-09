@@ -8,6 +8,7 @@
 схлопывает пересекающиеся CIDR, убирает поддомены при наличии родителя.
 
 Для загрузки по HTTP(S) требуется curl с поддержкой HTTP/2.
+Штатный API opencck запрашивается небольшими порциями по списку сервисов.
 
 Использование:
   python3 scripts/fetch_opencck.py                          # скачать с сервиса
@@ -22,17 +23,19 @@ import subprocess
 import sys
 import time
 import urllib.error
+import urllib.parse
 from pathlib import Path
 
 DEFAULT_SOURCE = "https://russia.iplist.opencck.org/?format=json"
 DOWNLOAD_ATTEMPTS = 5
 DOWNLOAD_TIMEOUT = 180
+SITES_PER_REQUEST = 4
 DOMAIN_RE = re.compile(r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$")
 
 
 def download(source: str) -> bytes:
-    # urllib поддерживает только HTTP/1.1; у opencck этот транспорт обрывается.
-    # curl предпочитает HTTP/2; целостность gzip проверяется ниже в Python.
+    # curl согласует HTTP/2; целостность gzip проверяется ниже в Python.
+    # Небольшие запросы к API формируются отдельно в load().
     try:
         result = subprocess.run(
             [
@@ -74,7 +77,7 @@ def download(source: str) -> bytes:
     return payload
 
 
-def load(source: str) -> dict:
+def load_json(source: str) -> dict:
     if not source.startswith(("http://", "https://")):
         return json.loads(Path(source).read_text(encoding="utf-8"))
 
@@ -103,6 +106,36 @@ def load(source: str) -> dict:
             file=sys.stderr,
         )
         time.sleep(delay)
+
+
+def load(source: str) -> dict:
+    if source != DEFAULT_SOURCE:
+        return load_json(source)
+
+    # data=name даёт маленький полный индекс. site — повторяемый параметр API
+    # (не site[]): каждый запрос возвращает исходные записи со всеми полями.
+    index_url = source + "&data=name"
+    index = load_json(index_url)
+    if (not isinstance(index, dict) or not index
+            or any(not isinstance(name, str) or not name or value != name
+                   for name, value in index.items())):
+        raise RuntimeError("opencck вернул некорректный или пустой индекс сервисов")
+
+    names = sorted(index)
+    result = {}
+    for offset in range(0, len(names), SITES_PER_REQUEST):
+        batch = names[offset:offset + SITES_PER_REQUEST]
+        url = source + "&" + urllib.parse.urlencode([("site", name) for name in batch])
+        records = load_json(url)
+        if (not isinstance(records, dict) or set(records) != set(batch)
+                or any(not isinstance(record, dict) for record in records.values())):
+            raise RuntimeError(
+                "opencck вернул неполную или некорректную порцию сервисов: "
+                + ", ".join(batch)
+            )
+        result.update(records)
+        print(f"opencck: получено {len(result)}/{len(names)} сервисов.", file=sys.stderr)
+    return result
 
 
 def read_extra(path: str) -> list[str]:

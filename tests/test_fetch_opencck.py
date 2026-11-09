@@ -10,6 +10,7 @@ import threading
 import unittest
 from unittest.mock import patch
 import urllib.error
+import urllib.parse
 
 from scripts import fetch_opencck
 
@@ -19,13 +20,15 @@ PAYLOAD = json.dumps(DATA).encode()
 
 
 @contextlib.contextmanager
-def serve(responses):
+def serve(responses, paths=None):
     requests = []
 
     class Handler(BaseHTTPRequestHandler):
         def do_GET(self):
             index = min(len(requests), len(responses) - 1)
             requests.append(self.headers)
+            if paths is not None:
+                paths.append(self.path)
             status, body, headers = responses[index]
             self.send_response(status)
             for name, value in headers.items():
@@ -54,7 +57,7 @@ def full(body=PAYLOAD, **headers):
 
 class LoadTests(unittest.TestCase):
     def setUp(self):
-        self.sleep = patch.object(fetch_opencck.time, "sleep").start()
+        self.sleep = patch.object(fetch_opencck, "time").start().sleep
         self.addCleanup(patch.stopall)
         patch("sys.stderr", new_callable=io.StringIO).start()
 
@@ -156,6 +159,68 @@ class LoadTests(unittest.TestCase):
                 self.assertEqual(fetch_opencck.load(str(source)), DATA)
                 request.assert_not_called()
             self.sleep.assert_not_called()
+
+
+class BatchedLoadTests(unittest.TestCase):
+    def setUp(self):
+        self.sleep = patch.object(fetch_opencck, "time").start().sleep
+        self.addCleanup(patch.stopall)
+        patch("sys.stderr", new_callable=io.StringIO).start()
+
+    def test_official_api_batches_keep_all_fields_and_retry_failed_batch(self):
+        records = {
+            "a.ru": {"domains": ["a.ru"], "external": {"domains": ["b.ru"]},
+                     "cidr4": ["192.0.2.0/24"],
+                     "replace": {"cidr4": {"192.0.2.0/24": ["192.0.2.0/25"]}}},
+            "b.ru": {"ip6": ["2001:db8::1"]},
+            "c.ru": {"domains": ["c.ru"]},
+        }
+        index = {name: name for name in records}
+        first = {name: records[name] for name in ["a.ru", "b.ru"]}
+        last = {"c.ru": records["c.ru"]}
+        paths = []
+        responses = [full(json.dumps(index).encode()),
+                     (503, b"unavailable", {}), full(json.dumps(first).encode()),
+                     full(json.dumps(last).encode())]
+        with serve(responses, paths) as (base, requests):
+            url = base + "?format=json"
+            with patch.object(fetch_opencck, "DEFAULT_SOURCE", url), \
+                    patch.object(fetch_opencck, "SITES_PER_REQUEST", 2):
+                self.assertEqual(fetch_opencck.load(url), records)
+        queries = [urllib.parse.parse_qs(urllib.parse.urlsplit(p).query) for p in paths]
+        self.assertEqual(queries, [
+            {"format": ["json"], "data": ["name"]},
+            {"format": ["json"], "site": ["a.ru", "b.ru"]},
+            {"format": ["json"], "site": ["a.ru", "b.ru"]},
+            {"format": ["json"], "site": ["c.ru"]},
+        ])
+        self.sleep.assert_called_once_with(2)
+
+    def test_invalid_index_stops_before_fetching_sites(self):
+        for index in ({}, [], {"a.ru": "other.ru"}, {"": ""}):
+            with self.subTest(index=index):
+                with patch.object(fetch_opencck, "load_json", return_value=index) as load:
+                    with self.assertRaisesRegex(RuntimeError, "индекс"):
+                        fetch_opencck.load(fetch_opencck.DEFAULT_SOURCE)
+                    load.assert_called_once()
+
+    def test_incomplete_or_unfiltered_batches_preserve_generated_files(self):
+        index = {"a.ru": "a.ru", "b.ru": "b.ru"}
+        invalid_batches = [{"a.ru": {}}, {"a.ru": {}, "b.ru": {}, "extra.ru": {}},
+                           {"a.ru": {}, "b.ru": None}, []]
+        with tempfile.TemporaryDirectory() as directory:
+            outdir = Path(directory)
+            files = [outdir / "russia-inside", outdir / "russia-inside.txt"]
+            for path in files:
+                path.write_text("previous contents\n")
+            for batch in invalid_batches:
+                with self.subTest(batch=batch):
+                    with patch.object(fetch_opencck, "load_json", side_effect=[index, batch]), \
+                            patch("sys.argv", ["fetch_opencck.py", "--outdir", str(outdir)]):
+                        with self.assertRaisesRegex(RuntimeError, "порцию"):
+                            fetch_opencck.main()
+                    for path in files:
+                        self.assertEqual(path.read_text(), "previous contents\n")
 
 
 if __name__ == "__main__":

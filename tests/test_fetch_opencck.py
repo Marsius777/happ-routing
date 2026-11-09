@@ -1,8 +1,8 @@
 import contextlib
 import gzip
-import http.client
 import io
 import json
+import subprocess
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 import tempfile
@@ -67,7 +67,7 @@ class LoadTests(unittest.TestCase):
                 with serve([truncated, full(body, **headers)]) as (url, requests):
                     self.assertEqual(fetch_opencck.load(url), DATA)
                     self.assertEqual(len(requests), 2)
-                    self.assertEqual(requests[0]["Accept-Encoding"], "gzip")
+                    self.assertIn("gzip", requests[0]["Accept-Encoding"])
                     self.assertEqual(requests[0]["User-Agent"], "happ-routing-build/1.0")
 
     def test_truncated_gzip_and_json_retry(self):
@@ -106,18 +106,53 @@ class LoadTests(unittest.TestCase):
                                         "--outdir", str(outdir)]):
                     with self.assertRaises(RuntimeError) as raised:
                         fetch_opencck.main()
-                self.assertIsInstance(raised.exception.__cause__, http.client.IncompleteRead)
+                self.assertIsInstance(raised.exception.__cause__, urllib.error.URLError)
                 self.assertEqual(len(requests), 5)
                 self.assertEqual([call.args[0] for call in self.sleep.call_args_list],
                                  [2, 4, 8, 16])
             for path in files:
                 self.assertEqual(path.read_text(), "previous contents\n")
 
+    def test_https_negotiates_http2(self):
+        response = subprocess.CompletedProcess([], 0, PAYLOAD + b"\n200 2", b"")
+        with patch.object(fetch_opencck.subprocess, "run", return_value=response) as run:
+            self.assertEqual(fetch_opencck.load("https://example.org/list.json"), DATA)
+            self.assertIn("--http2", run.call_args.args[0])
+        self.sleep.assert_not_called()
+
+    def test_failed_transfer_discards_even_valid_json(self):
+        failed = subprocess.CompletedProcess([], 18, PAYLOAD + b"\n200 2", b"partial transfer")
+        good = subprocess.CompletedProcess([], 0, PAYLOAD + b"\n200 2", b"")
+        with patch.object(fetch_opencck.subprocess, "run", side_effect=[failed, good]) as run:
+            self.assertEqual(fetch_opencck.load("https://example.org/list.json"), DATA)
+            self.assertEqual(run.call_count, 2)
+        self.sleep.assert_called_once_with(2)
+
+    def test_missing_or_unsupported_curl_fails_without_retries(self):
+        with patch.object(fetch_opencck.subprocess, "run", side_effect=FileNotFoundError):
+            with self.assertRaisesRegex(RuntimeError, "установите curl"):
+                fetch_opencck.load("https://example.org/list.json")
+        unsupported = subprocess.CompletedProcess([], 2, b"", b"HTTP/2 not supported")
+        with patch.object(fetch_opencck.subprocess, "run", return_value=unsupported) as run:
+            with self.assertRaisesRegex(RuntimeError, "HTTP/2 not supported"):
+                fetch_opencck.load("https://example.org/list.json")
+            run.assert_called_once()
+        self.sleep.assert_not_called()
+
+    def test_subprocess_timeout_retries(self):
+        good = subprocess.CompletedProcess([], 0, PAYLOAD + b"\n200 2", b"")
+        with patch.object(fetch_opencck.subprocess, "run", side_effect=[
+            subprocess.TimeoutExpired("curl", 185), good,
+        ]) as run:
+            self.assertEqual(fetch_opencck.load("https://example.org/list.json"), DATA)
+            self.assertEqual(run.call_count, 2)
+        self.sleep.assert_called_once_with(2)
+
     def test_local_source_does_not_use_network(self):
         with tempfile.TemporaryDirectory() as directory:
             source = Path(directory) / "source.json"
             source.write_bytes(PAYLOAD)
-            with patch.object(fetch_opencck.urllib.request, "urlopen") as request:
+            with patch.object(fetch_opencck.subprocess, "run") as request:
                 self.assertEqual(fetch_opencck.load(str(source)), DATA)
                 request.assert_not_called()
             self.sleep.assert_not_called()

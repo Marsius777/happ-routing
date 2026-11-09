@@ -7,20 +7,21 @@
 Применяет секцию "replace" (узкие подсети вместо широких зон),
 схлопывает пересекающиеся CIDR, убирает поддомены при наличии родителя.
 
+Для загрузки по HTTP(S) требуется curl с поддержкой HTTP/2.
+
 Использование:
   python3 scripts/fetch_opencck.py                          # скачать с сервиса
   python3 scripts/fetch_opencck.py --source ip-list.json    # из локального файла
 """
 import argparse
 import gzip
-import http.client
 import ipaddress
 import json
 import re
+import subprocess
 import sys
 import time
 import urllib.error
-import urllib.request
 from pathlib import Path
 
 DEFAULT_SOURCE = "https://russia.iplist.opencck.org/?format=json"
@@ -29,26 +30,63 @@ DOWNLOAD_TIMEOUT = 180
 DOMAIN_RE = re.compile(r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$")
 
 
+def download(source: str) -> bytes:
+    # urllib поддерживает только HTTP/1.1; у opencck этот транспорт обрывается.
+    # curl предпочитает HTTP/2; целостность gzip проверяется ниже в Python.
+    try:
+        result = subprocess.run(
+            [
+                "curl", "--http2", "--fail", "--silent", "--show-error",
+                "--location", "--header", "Accept-Encoding: gzip",
+                "--connect-timeout", "20", "--max-time", str(DOWNLOAD_TIMEOUT),
+                "--user-agent", "happ-routing-build/1.0",
+                "--write-out", "\n%{http_code} %{http_version}",
+                "--url", source,
+            ],
+            capture_output=True,
+            timeout=DOWNLOAD_TIMEOUT + 5,
+        )
+    except FileNotFoundError as exc:
+        raise RuntimeError("Для загрузки opencck установите curl с поддержкой HTTP/2") from exc
+
+    payload, separator, metadata = result.stdout.rpartition(b"\n")
+    status, _, version = metadata.partition(b" ")
+    status_code = int(status) if status.isdigit() else 0
+    if result.returncode:
+        message = result.stderr.decode("utf-8", errors="replace").strip()
+        message = message or f"curl завершился с кодом {result.returncode}"
+        if status_code >= 400:
+            raise urllib.error.HTTPError(source, status_code, message, None, None)
+        if result.returncode in (1, 2, 3, 4, 60, 77):
+            # Неподдерживаемая опция/протокол или ошибка проверки сертификата.
+            raise RuntimeError(message)
+        raise urllib.error.URLError(message)
+    if not separator or not status_code or not version:
+        raise RuntimeError("curl не вернул HTTP-статус и версию протокола")
+    # Сервер может вернуть gzip или обычный JSON, если сжатие не поддерживается.
+    # JSON не начинается с сигнатуры gzip; decompress также проверяет конец и CRC.
+    if payload.startswith(b"\x1f\x8b"):
+        payload = gzip.decompress(payload)
+    print(
+        f"Загрузка opencck: HTTP/{version.decode('ascii')}, {len(payload)} байт.",
+        file=sys.stderr,
+    )
+    return payload
+
+
 def load(source: str) -> dict:
     if not source.startswith(("http://", "https://")):
         return json.loads(Path(source).read_text(encoding="utf-8"))
 
-    req = urllib.request.Request(source, headers={
-        "User-Agent": "happ-routing-build/1.0",
-        "Accept-Encoding": "gzip",
-    })
     for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
         try:
-            with urllib.request.urlopen(req, timeout=DOWNLOAD_TIMEOUT) as r:
-                payload = r.read()
-                if r.headers.get("Content-Encoding", "").strip().lower() == "gzip":
-                    payload = gzip.decompress(payload)
-            return json.loads(payload)
+            return json.loads(download(source))
         except urllib.error.HTTPError as exc:
             if exc.code not in (408, 429) and not 500 <= exc.code < 600:
                 raise
             error = exc
-        except (OSError, http.client.HTTPException, EOFError, json.JSONDecodeError) as exc:
+        except (urllib.error.URLError, subprocess.TimeoutExpired,
+                gzip.BadGzipFile, EOFError, json.JSONDecodeError) as exc:
             error = exc
 
         if attempt == DOWNLOAD_ATTEMPTS:

@@ -3,3 +3,4 @@ dlc/
 rvpn-geosite/
 geoip-tool/
 __pycache__/
+.idea

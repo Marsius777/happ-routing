@@ -12,23 +12,59 @@
   python3 scripts/fetch_opencck.py --source ip-list.json    # из локального файла
 """
 import argparse
+import gzip
+import http.client
 import ipaddress
 import json
 import re
 import sys
+import time
+import urllib.error
 import urllib.request
 from pathlib import Path
 
 DEFAULT_SOURCE = "https://russia.iplist.opencck.org/?format=json"
+DOWNLOAD_ATTEMPTS = 5
+DOWNLOAD_TIMEOUT = 180
 DOMAIN_RE = re.compile(r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$")
 
 
 def load(source: str) -> dict:
-    if source.startswith(("http://", "https://")):
-        req = urllib.request.Request(source, headers={"User-Agent": "happ-routing-build/1.0"})
-        with urllib.request.urlopen(req, timeout=180) as r:
-            return json.load(r)
-    return json.loads(Path(source).read_text(encoding="utf-8"))
+    if not source.startswith(("http://", "https://")):
+        return json.loads(Path(source).read_text(encoding="utf-8"))
+
+    req = urllib.request.Request(source, headers={
+        "User-Agent": "happ-routing-build/1.0",
+        "Accept-Encoding": "gzip",
+    })
+    for attempt in range(1, DOWNLOAD_ATTEMPTS + 1):
+        try:
+            with urllib.request.urlopen(req, timeout=DOWNLOAD_TIMEOUT) as r:
+                payload = r.read()
+                if r.headers.get("Content-Encoding", "").strip().lower() == "gzip":
+                    payload = gzip.decompress(payload)
+            return json.loads(payload)
+        except urllib.error.HTTPError as exc:
+            if exc.code not in (408, 429) and not 500 <= exc.code < 600:
+                raise
+            error = exc
+        except (OSError, http.client.HTTPException, EOFError, json.JSONDecodeError) as exc:
+            error = exc
+
+        if attempt == DOWNLOAD_ATTEMPTS:
+            raise RuntimeError(
+                f"Не удалось загрузить JSON из {source} "
+                f"после {DOWNLOAD_ATTEMPTS} попыток"
+            ) from error
+
+        delay = 2 ** attempt
+        print(
+            f"Загрузка opencck: попытка {attempt}/{DOWNLOAD_ATTEMPTS} "
+            f"не удалась ({type(error).__name__}: {error}). "
+            f"Повтор через {delay} с.",
+            file=sys.stderr,
+        )
+        time.sleep(delay)
 
 
 def read_extra(path: str) -> list[str]:

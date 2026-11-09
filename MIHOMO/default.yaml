@@ -1,0 +1,226 @@
+# Personal-RU: сгенерировано из config/routing-template.json.
+# Для 3x-ui → Подписка → Clash/Mihomo → Глобальные правила маршрутизации.
+# VPN-узлы добавляет панель. DNS/TUN настраиваются отдельно.
+proxy-groups:
+- name: PROXY
+  type: select
+  proxies:
+  - AUTO
+  include-all: true
+- name: AUTO
+  type: url-test
+  include-all: true
+  url: https://www.gstatic.com/generate_204
+  interval: 300
+  tolerance: 100
+  lazy: true
+rule-providers:
+  geosite-win-spy:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geosite-win-spy.yaml
+    path: ./ruleset/personal-ru/geosite-win-spy.yaml
+    interval: 86400
+    proxy: PROXY
+  geosite-category-ads:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geosite-category-ads.yaml
+    path: ./ruleset/personal-ru/geosite-category-ads.yaml
+    interval: 86400
+    proxy: PROXY
+  geosite-google-play:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geosite-google-play.yaml
+    path: ./ruleset/personal-ru/geosite-google-play.yaml
+    interval: 86400
+    proxy: PROXY
+  geosite-github:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geosite-github.yaml
+    path: ./ruleset/personal-ru/geosite-github.yaml
+    interval: 86400
+    proxy: PROXY
+  geosite-twitch-ads:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geosite-twitch-ads.yaml
+    path: ./ruleset/personal-ru/geosite-twitch-ads.yaml
+    interval: 86400
+    proxy: PROXY
+  geosite-youtube:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geosite-youtube.yaml
+    path: ./ruleset/personal-ru/geosite-youtube.yaml
+    interval: 86400
+    proxy: PROXY
+  geosite-telegram:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geosite-telegram.yaml
+    path: ./ruleset/personal-ru/geosite-telegram.yaml
+    interval: 86400
+    proxy: PROXY
+  geosite-private:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geosite-private.yaml
+    path: ./ruleset/personal-ru/geosite-private.yaml
+    interval: 86400
+    proxy: PROXY
+  geosite-russia-inside:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geosite-russia-inside.yaml
+    path: ./ruleset/personal-ru/geosite-russia-inside.yaml
+    interval: 86400
+    proxy: PROXY
+  geosite-category-ru:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geosite-category-ru.yaml
+    path: ./ruleset/personal-ru/geosite-category-ru.yaml
+    interval: 86400
+    proxy: PROXY
+  geosite-whitelist:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geosite-whitelist.yaml
+    path: ./ruleset/personal-ru/geosite-whitelist.yaml
+    interval: 86400
+    proxy: PROXY
+  geosite-microsoft:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geosite-microsoft.yaml
+    path: ./ruleset/personal-ru/geosite-microsoft.yaml
+    interval: 86400
+    proxy: PROXY
+  geosite-apple:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geosite-apple.yaml
+    path: ./ruleset/personal-ru/geosite-apple.yaml
+    interval: 86400
+    proxy: PROXY
+  geosite-epicgames:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geosite-epicgames.yaml
+    path: ./ruleset/personal-ru/geosite-epicgames.yaml
+    interval: 86400
+    proxy: PROXY
+  geosite-riot:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geosite-riot.yaml
+    path: ./ruleset/personal-ru/geosite-riot.yaml
+    interval: 86400
+    proxy: PROXY
+  geosite-escapefromtarkov:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geosite-escapefromtarkov.yaml
+    path: ./ruleset/personal-ru/geosite-escapefromtarkov.yaml
+    interval: 86400
+    proxy: PROXY
+  geosite-steam:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geosite-steam.yaml
+    path: ./ruleset/personal-ru/geosite-steam.yaml
+    interval: 86400
+    proxy: PROXY
+  geosite-twitch:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geosite-twitch.yaml
+    path: ./ruleset/personal-ru/geosite-twitch.yaml
+    interval: 86400
+    proxy: PROXY
+  geosite-pinterest:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geosite-pinterest.yaml
+    path: ./ruleset/personal-ru/geosite-pinterest.yaml
+    interval: 86400
+    proxy: PROXY
+  geosite-faceit:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geosite-faceit.yaml
+    path: ./ruleset/personal-ru/geosite-faceit.yaml
+    interval: 86400
+    proxy: PROXY
+  geoip-private:
+    type: http
+    behavior: ipcidr
+    format: text
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geoip-private.txt
+    path: ./ruleset/personal-ru/geoip-private.txt
+    interval: 86400
+    proxy: PROXY
+  geoip-direct:
+    type: http
+    behavior: ipcidr
+    format: text
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geoip-direct.txt
+    path: ./ruleset/personal-ru/geoip-direct.txt
+    interval: 86400
+    proxy: PROXY
+  geoip-russia-inside:
+    type: http
+    behavior: ipcidr
+    format: text
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geoip-russia-inside.txt
+    path: ./ruleset/personal-ru/geoip-russia-inside.txt
+    interval: 86400
+    proxy: PROXY
+rules:
+- RULE-SET,geosite-win-spy,REJECT
+- RULE-SET,geosite-category-ads,REJECT
+- RULE-SET,geosite-google-play,PROXY
+- RULE-SET,geosite-github,PROXY
+- RULE-SET,geosite-twitch-ads,PROXY
+- RULE-SET,geosite-youtube,PROXY
+- RULE-SET,geosite-telegram,PROXY
+- RULE-SET,geosite-private,DIRECT
+- RULE-SET,geosite-russia-inside,DIRECT
+- RULE-SET,geosite-category-ru,DIRECT
+- RULE-SET,geosite-whitelist,DIRECT
+- RULE-SET,geosite-microsoft,DIRECT
+- RULE-SET,geosite-apple,DIRECT
+- RULE-SET,geosite-epicgames,DIRECT
+- RULE-SET,geosite-riot,DIRECT
+- RULE-SET,geosite-escapefromtarkov,DIRECT
+- RULE-SET,geosite-steam,DIRECT
+- RULE-SET,geosite-twitch,DIRECT
+- RULE-SET,geosite-pinterest,DIRECT
+- RULE-SET,geosite-faceit,DIRECT
+- RULE-SET,geoip-private,DIRECT
+- RULE-SET,geoip-direct,DIRECT
+- RULE-SET,geoip-russia-inside,DIRECT
+- MATCH,PROXY

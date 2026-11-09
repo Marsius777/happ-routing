@@ -1,4 +1,4 @@
-name: Build geo-files and Happ routing
+name: Build geo-files and Happ/Mihomo routing
 
 on:
   schedule:
@@ -10,6 +10,7 @@ on:
       - "config/**"
       - "custom/**"
       - "scripts/**"
+      - "tests/**"
       - ".github/workflows/build.yml"
 
 permissions:
@@ -33,6 +34,12 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install Python dependencies
+        run: python3 -m pip install --quiet PyYAML qrcode pillow
+
+      - name: Test routing builders
+        run: python3 -B -m unittest discover -s tests -v
+
       - name: Generate lists from opencck
         run: python3 scripts/fetch_opencck.py --outdir build
 
@@ -45,8 +52,11 @@ jobs:
           cp -f rvpn-geosite/data/* dlc/data/
           cp -f build/russia-inside dlc/data/russia-inside
           mkdir -p "$GITHUB_WORKSPACE/release"
+          GEOSITE_LISTS="$(python3 scripts/build_mihomo.py --list-geosite)"
           cd dlc
-          go run ./ --datapath=./data --outputname=geosite.dat --outputdir="$GITHUB_WORKSPACE/release"
+          go run ./ --datapath=./data --outputname=geosite.dat \
+            --outputdir="$GITHUB_WORKSPACE/build/geosite" --exportlists="$GEOSITE_LISTS"
+          cp "$GITHUB_WORKSPACE/build/geosite/geosite.dat" "$GITHUB_WORKSPACE/release/geosite.dat"
 
       - name: Build geoip.dat
         run: |
@@ -63,7 +73,8 @@ jobs:
               { "type": "private", "action": "add" }
             ],
             "output": [
-              { "type": "v2rayGeoIPDat", "action": "output", "args": { "outputDir": "./output", "outputName": "geoip.dat" } }
+              { "type": "v2rayGeoIPDat", "action": "output", "args": { "outputDir": "./output", "outputName": "geoip.dat" } },
+              { "type": "text", "action": "output", "args": { "outputDir": "../build/geoip", "outputExtension": ".txt" } }
             ]
           }
           EOF
@@ -71,12 +82,15 @@ jobs:
           go run ./ -c config-custom.json
           cp output/geoip.dat "$GITHUB_WORKSPACE/release/geoip.dat"
 
+      - name: Build Mihomo routing profile and rule providers
+        run: python3 scripts/build_mihomo.py
+
       - name: Check for changes
         id: changes
         run: |
-          if [ "${{ github.event_name }}" = "schedule" ] && [ -z "$(git status --porcelain -- release)" ]; then
+          if [ "${{ github.event_name }}" = "schedule" ] && [ -z "$(git status --porcelain -- release MIHOMO)" ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"
-            echo "Геофайлы не изменились — пропускаем релиз"
+            echo "Геофайлы и правила Mihomo не изменились — пропускаем релиз"
           else
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
@@ -88,7 +102,6 @@ jobs:
           TAG="$(date -u +%Y%m%d%H%M)"
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           python3 scripts/build_routing.py --tag "$TAG"
-          pip install --quiet qrcode pillow
           python3 -c 'import qrcode; qrcode.make(open("HAPP/ROUTING.DEEPLINK").read().strip()).save("HAPP/ROUTING.QR.png")'
 
       - name: Commit and tag
@@ -96,7 +109,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add release HAPP
+          git add release HAPP MIHOMO
           git commit -m "build: ${{ steps.routing.outputs.tag }}"
           git tag "${{ steps.routing.outputs.tag }}"
           git push origin HEAD --follow-tags
@@ -109,3 +122,4 @@ jobs:
           files: |
             release/geosite.dat
             release/geoip.dat
+            MIHOMO/default.yaml

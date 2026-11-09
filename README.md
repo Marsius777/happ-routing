@@ -1,6 +1,6 @@
-# Personal Happ Routing
+# Personal Happ / Mihomo Routing
 
-Собственный профиль раздельной маршрутизации для [Happ](https://happ.su) (аналог RoscomVPN, но полностью под вашим контролем) + автосборка geosite.dat / geoip.dat.
+Собственный профиль раздельной маршрутизации для [Happ](https://happ.su) и Mihomo (аналог RoscomVPN, но полностью под вашим контролем) + автосборка geosite.dat / geoip.dat.
 
 Логика трафика (вы в России, VPS за границей, `GlobalProxy: true`):
 
@@ -20,9 +20,11 @@ custom/domains-extra.txt       ← свои домены в DIRECT (russia-insid
 custom/cidr-extra.txt          ← свои IP/CIDR в DIRECT (russia-inside)
 scripts/fetch_opencck.py       ← качает списки opencck → домены + CIDR
 scripts/build_routing.py       ← собирает ROUTING.JSON и happ://-ссылки
+scripts/build_mihomo.py        ← собирает YAML и списки правил Mihomo из того же шаблона
 .github/workflows/build.yml    ← автосборка (ежедневно + при каждом push)
 release/                       ← geosite.dat, geoip.dat (генерируется CI)
 HAPP/                          ← ROUTING.JSON, DEEPLINK, QR (генерируется CI)
+MIHOMO/                        ← default.yaml и rules/* (генерируется CI)
 ```
 
 Сборка geosite.dat: полный набор категорий [v2fly](https://github.com/v2fly/domain-list-community) + кастомные категории [roscomvpn-geosite](https://github.com/hydraponique/roscomvpn-geosite) (`whitelist`, `twitch-ads`, `faceit`…) + ваша `russia-inside`. Сборка geoip.dat: [roscomvpn-geoip](https://github.com/hydraponique/roscomvpn-geoip) (`geoip:direct`) + ваша `geoip:russia-inside`. Файлы публикуются в `release/` и раздаются через jsDelivr CDN с ветки `main` (работает из РФ; URL стабильный, CDN подтягивает свежие файлы в течение ~12 часов).
@@ -43,7 +45,7 @@ HAPP/                          ← ROUTING.JSON, DEEPLINK, QR (генериру�
 
 3. Разрешите Actions писать в репозиторий: **Settings → Actions → General → Workflow permissions → Read and write permissions → Save**.
 
-4. Запустите сборку: **Actions → Build geo-files and Happ routing → Run workflow** (push из шага 2 тоже мог её запустить). Ждите ~5 минут.
+4. Запустите сборку: **Actions → Build geo-files and Happ/Mihomo routing → Run workflow** (push из шага 2 тоже мог её запустить). Ждите ~5 минут.
 
 5. После сборки в репозитории появятся:
    - `HAPP/ROUTING.DEEPLINK` — ссылка `happ://routing/add/…` (ручное добавление);
@@ -62,11 +64,52 @@ HAPP/                          ← ROUTING.JSON, DEEPLINK, QR (генериру�
 
 Ручная установка без панели: открыть `ROUTING.DEEPLINK` на устройстве, отсканировать QR или вставить ссылку из буфера в Happ.
 
+## Подключение Clash / Mihomo к 3x-ui
+
+Та же сборка создаёт `MIHOMO/default.yaml` и `MIHOMO/rules/*` из
+`config/routing-template.json`. Используются те же исходники, что для Happ:
+плоский экспорт категорий v2fly + RoscomVPN + `russia-inside` и текстовый экспорт
+GeoIP. В клиенте не нужны отдельные `.dat`: YAML ссылается на списки нашего репозитория.
+
+После первого успешного workflow вставьте постоянную ссылку в
+**3x-ui → Настройки → Подписка → Clash / Mihomo → Глобальные правила маршрутизации**:
+
+```text
+https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/default.yaml
+```
+
+Для другого форка замените `Marsius777/happ-routing` на свой репозиторий.
+Сохраните настройки панели и обновите Clash/Mihomo-подписку в клиенте.
+
+- Файл содержит только `proxy-groups`, `rule-providers` и `rules`. Узлы VPN формирует
+  3x-ui; адресов подписок и ключей клиентов в публичном YAML нет.
+- Группа `PROXY` позволяет выбрать узел вручную или `AUTO`. `AUTO` проверяет задержку
+  раз в 300 секунд и выбирает узел по задержке, а не по загрузке CPU сервера.
+- `RouteOrder` задаёт приоритет категорий. При `block-proxy-direct` блокировки идут
+  первыми, затем явные VPN-правила, затем DIRECT; при `GlobalProxy: true`
+  завершающее правило — `MATCH,PROXY`.
+- Провайдеры списков обновляются самим Mihomo через `PROXY` раз в 86400 секунд. Новый порядок
+  правил и изменения групп приходят при обновлении подписки через 3x-ui, после
+  обновления удалённого YAML панелью.
+- DNS, `DnsHosts`, FakeDNS и TUN из Happ-шаблона сюда не переносятся: поле 3x-ui
+  импортирует только маршрутизацию. Эти параметры задаются отдельно в панели/клиенте.
+- Экспорт GeoSite сохраняет суффиксы, точные домены, ключевые слова и регулярные
+  выражения. Поддерживаются категории `geosite:name` / `geoip:name` без `@`-фильтров;
+  неизвестные форматы и отсутствующие/пустые списки останавливают сборку.
+
+Локальная генерация после штатного экспорта списков в `build/geosite/*.txt` и
+`build/geoip/*.txt`:
+
+```bash
+python3 -m pip install PyYAML
+python3 scripts/build_mihomo.py --repo Marsius777/happ-routing
+```
+
 ## Как редактировать
 
 - **Перекинуть сервис между direct/proxy/block** — правьте массивы `DirectSites`, `ProxySites`, `BlockSites`, `DirectIp` и т.д. в `config/routing-template.json`. Доступны все категории v2fly (`geosite:netflix`, `geosite:openai`…), категории roscomvpn и ваша `geosite:russia-inside` / `geoip:russia-inside`.
 - **Добавить свой домен/подсеть в direct** — допишите строку в `custom/domains-extra.txt` / `custom/cidr-extra.txt`.
-- Сделайте `git push` — Actions пересоберёт всё автоматически и обновит `HAPP/` и `release/`.
+- Сделайте `git push` — Actions пересоберёт всё автоматически и обновит `HAPP/`, `MIHOMO/` и `release/`.
 
 ## Обновления
 

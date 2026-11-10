@@ -71,6 +71,14 @@ rule-providers:
     path: ./ruleset/personal-ru/geosite-telegram.yaml
     interval: 86400
     proxy: PROXY
+  geosite-soundcloud:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geosite-soundcloud.yaml
+    path: ./ruleset/personal-ru/geosite-soundcloud.yaml
+    interval: 86400
+    proxy: PROXY
   geosite-private:
     type: http
     behavior: classical
@@ -207,6 +215,7 @@ rules:
 - RULE-SET,geosite-twitch-ads,PROXY
 - RULE-SET,geosite-youtube,PROXY
 - RULE-SET,geosite-telegram,PROXY
+- RULE-SET,geosite-soundcloud,PROXY
 - RULE-SET,geosite-private,DIRECT
 - RULE-SET,geosite-russia-inside,DIRECT
 - RULE-SET,geosite-category-ru,DIRECT
@@ -220,7 +229,6 @@ rules:
 - RULE-SET,geosite-twitch,DIRECT
 - RULE-SET,geosite-pinterest,DIRECT
 - RULE-SET,geosite-faceit,DIRECT
-- RULE-SET,geosite-soundcloud,PROXY
 - RULE-SET,geoip-private,DIRECT
 - RULE-SET,geoip-direct,DIRECT
 - RULE-SET,geoip-russia-inside,DIRECT

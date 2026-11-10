@@ -220,6 +220,7 @@ rules:
 - RULE-SET,geosite-twitch,DIRECT
 - RULE-SET,geosite-pinterest,DIRECT
 - RULE-SET,geosite-faceit,DIRECT
+- RULE-SET,geosite-soundcloud,PROXY
 - RULE-SET,geoip-private,DIRECT
 - RULE-SET,geoip-direct,DIRECT
 - RULE-SET,geoip-russia-inside,DIRECT

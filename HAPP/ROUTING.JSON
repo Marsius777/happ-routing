@@ -43,7 +43,8 @@
     "geosite:github",
     "geosite:twitch-ads",
     "geosite:youtube",
-    "geosite:telegram"
+    "geosite:telegram",
+    "geosite:soundcloud"
   ],
   "ProxyIp": [],
   "BlockSites": [

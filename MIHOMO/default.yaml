@@ -79,6 +79,14 @@ rule-providers:
     path: ./ruleset/personal-ru/geosite-soundcloud.yaml
     interval: 86400
     proxy: PROXY
+  geosite-spotify:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geosite-spotify.yaml
+    path: ./ruleset/personal-ru/geosite-spotify.yaml
+    interval: 86400
+    proxy: PROXY
   geosite-private:
     type: http
     behavior: classical
@@ -216,6 +224,7 @@ rules:
 - RULE-SET,geosite-youtube,PROXY
 - RULE-SET,geosite-telegram,PROXY
 - RULE-SET,geosite-soundcloud,PROXY
+- RULE-SET,geosite-spotify,PROXY
 - RULE-SET,geosite-private,DIRECT
 - RULE-SET,geosite-russia-inside,DIRECT
 - RULE-SET,geosite-category-ru,DIRECT

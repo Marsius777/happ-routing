@@ -12,7 +12,7 @@
   "DomesticDNSType": "DoH",
   "Geositeurl": "https://raw.githubusercontent.com/Marsius777/happ-routing/main/release/geosite.dat",
   "Geoipurl": "https://raw.githubusercontent.com/Marsius777/happ-routing/main/release/geoip.dat",
-  "LastUpdated": "1794391190",
+  "LastUpdated": "1794396419",
   "DnsHosts": {
     "lkfl2.nalog.ru": "213.24.64.175",
     "lknpd.nalog.ru": "213.24.64.181"
@@ -44,7 +44,8 @@
     "geosite:twitch-ads",
     "geosite:youtube",
     "geosite:telegram",
-    "geosite:soundcloud"
+    "geosite:soundcloud",
+    "geosite:spotify"
   ],
   "ProxyIp": [],
   "BlockSites": [

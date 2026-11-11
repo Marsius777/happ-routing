@@ -52,6 +52,6 @@
     "geosite:category-ads"
   ],
   "BlockIp": [],
-  "DomainStrategy": "IPIfNonMatch",
+  "DomainStrategy": "IPOnDemand",
   "FakeDNS": "false"
 }

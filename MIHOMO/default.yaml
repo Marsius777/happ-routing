@@ -1,6 +1,6 @@
 # Personal-RU: сгенерировано из config/routing-template.json.
 # Для 3x-ui → Подписка → Clash/Mihomo → Глобальные правила маршрутизации.
-# VPN-узлы добавляет панель. DNS/TUN настраиваются отдельно.
+# VPN-узлы добавляет панель; для передачи DNS включите subClashRemoteDNS.
 proxy-groups:
 - name: PROXY
   type: select
@@ -85,6 +85,22 @@ rule-providers:
     format: yaml
     url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geosite-spotify.yaml
     path: ./ruleset/personal-ru/geosite-spotify.yaml
+    interval: 86400
+    proxy: PROXY
+  geosite-anthropic:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geosite-anthropic.yaml
+    path: ./ruleset/personal-ru/geosite-anthropic.yaml
+    interval: 86400
+    proxy: PROXY
+  geosite-openai:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/geosite-openai.yaml
+    path: ./ruleset/personal-ru/geosite-openai.yaml
     interval: 86400
     proxy: PROXY
   geosite-private:
@@ -215,6 +231,22 @@ rule-providers:
     path: ./ruleset/personal-ru/geoip-russia-inside.txt
     interval: 86400
     proxy: PROXY
+  dns-01-proxy:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/dns-01-proxy.yaml
+    path: ./ruleset/personal-ru/dns-01-proxy.yaml
+    interval: 86400
+    proxy: PROXY
+  dns-02-direct:
+    type: http
+    behavior: classical
+    format: yaml
+    url: https://raw.githubusercontent.com/Marsius777/happ-routing/main/MIHOMO/rules/dns-02-direct.yaml
+    path: ./ruleset/personal-ru/dns-02-direct.yaml
+    interval: 86400
+    proxy: PROXY
 rules:
 - RULE-SET,geosite-win-spy,REJECT
 - RULE-SET,geosite-category-ads,REJECT
@@ -225,6 +257,26 @@ rules:
 - RULE-SET,geosite-telegram,PROXY
 - RULE-SET,geosite-soundcloud,PROXY
 - RULE-SET,geosite-spotify,PROXY
+- RULE-SET,geosite-anthropic,PROXY
+- DOMAIN-SUFFIX,anthropic.com.,PROXY
+- DOMAIN-SUFFIX,anthropic.team.,PROXY
+- DOMAIN-SUFFIX,claude.ai.,PROXY
+- DOMAIN-SUFFIX,claude.app.,PROXY
+- DOMAIN-SUFFIX,claude.com.,PROXY
+- DOMAIN-SUFFIX,claude.dev.,PROXY
+- DOMAIN-SUFFIX,claude.new.,PROXY
+- DOMAIN-SUFFIX,claude.site.,PROXY
+- DOMAIN-SUFFIX,claudeusercontent.com.,PROXY
+- RULE-SET,geosite-openai,PROXY
+- DOMAIN-SUFFIX,openai.com.,PROXY
+- DOMAIN-SUFFIX,openai.org.,PROXY
+- DOMAIN-SUFFIX,chatgpt.com.,PROXY
+- DOMAIN-SUFFIX,chatgpt.site.,PROXY
+- DOMAIN-SUFFIX,oaistatic.com.,PROXY
+- DOMAIN-SUFFIX,oaistatsig.com.,PROXY
+- DOMAIN-SUFFIX,oaiusercontent.com.,PROXY
+- DOMAIN-SUFFIX,sora.com.,PROXY
+- DOMAIN-SUFFIX,chat.com.,PROXY
 - RULE-SET,geosite-private,DIRECT
 - RULE-SET,geosite-russia-inside,DIRECT
 - RULE-SET,geosite-category-ru,DIRECT
@@ -242,3 +294,19 @@ rules:
 - RULE-SET,geoip-direct,DIRECT
 - RULE-SET,geoip-russia-inside,DIRECT
 - MATCH,PROXY
+dns:
+  enable: true
+  default-nameserver:
+  - 77.88.8.8
+  - 8.8.8.8
+  proxy-server-nameserver:
+  - https://common.dot.dns.yandex.net/dns-query#DIRECT
+  nameserver:
+  - https://dns.google/dns-query#PROXY
+  direct-nameserver:
+  - https://common.dot.dns.yandex.net/dns-query#DIRECT
+  nameserver-policy:
+    rule-set:dns-01-proxy:
+    - https://dns.google/dns-query#PROXY
+    rule-set:dns-02-direct:
+    - https://common.dot.dns.yandex.net/dns-query#DIRECT
